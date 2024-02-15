@@ -82,10 +82,10 @@ impl RaytracingPass {
                 wgpu::BindGroupLayoutEntry {
                     binding: 6,
                     visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
                     },
                     count: None,
                 },
@@ -101,6 +101,16 @@ impl RaytracingPass {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 8,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 9,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
@@ -141,6 +151,7 @@ impl RaytracingPass {
         settings_uniform: &UniformBuffer<SettingsUniform>,
         per_render_uniform: &UniformBuffer<PerRenderUniform>,
         camera_uniform: &UniformBuffer<GpuCamera>,
+        environment_texture: &Texture2D,
         materials_storage: &StorageBuffer<GpuMaterial>,
         vertices_storage: &StorageBuffer<GpuVertex>,
         triangles_storage: &StorageBuffer<GpuTriangle>,
@@ -175,14 +186,18 @@ impl RaytracingPass {
                 },
                 wgpu::BindGroupEntry {
                     binding: 6,
-                    resource: materials_storage.as_entire_binding(),
+                    resource: wgpu::BindingResource::TextureView(environment_texture.view()),
                 },
                 wgpu::BindGroupEntry {
                     binding: 7,
-                    resource: vertices_storage.as_entire_binding(),
+                    resource: materials_storage.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 8,
+                    resource: vertices_storage.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 9,
                     resource: triangles_storage.as_entire_binding(),
                 },
             ],

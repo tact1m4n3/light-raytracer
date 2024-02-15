@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::{
     camera::{Camera, GpuCamera},
     geometry::{Geometry, GpuMaterial, GpuTriangle, GpuVertex},
+    Environment,
 };
 
 use self::{
@@ -25,6 +26,7 @@ pub struct Renderer {
     settings_uniform: UniformBuffer<SettingsUniform>,
     per_render_uniform: UniformBuffer<PerRenderUniform>,
     camera_uniform: UniformBuffer<GpuCamera>,
+    environment_texture: Texture2D,
     materials_storage: StorageBuffer<GpuMaterial>,
     vertices_storage: StorageBuffer<GpuVertex>,
     triangles_storage: StorageBuffer<GpuTriangle>,
@@ -37,10 +39,12 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         size: glam::UVec2,
         output_format: wgpu::TextureFormat,
         settings: RendererSettings,
         camera: Camera,
+        environment: Environment,
         geometry: Geometry,
     ) -> Self {
         let acc_input_texture = Texture2D::new(
@@ -102,6 +106,33 @@ impl Renderer {
         let camera_uniform =
             UniformBuffer::new_with_data(device, "camera_uniform", &[GpuCamera::from(camera)]);
 
+        let environment = if environment.validate() {
+            environment
+        } else {
+            println!("invalid");
+            Environment::default()
+        };
+
+        let environment_texture = Texture2D::new(
+            device,
+            "environment_texture",
+            environment.size,
+            wgpu::TextureFormat::Rgba32Float,
+            wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            1,
+        );
+
+        queue.write_texture(
+            environment_texture.inner().as_image_copy(),
+            &environment.data,
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(environment.size.x * std::mem::size_of::<glam::Vec4>() as u32),
+                rows_per_image: Some(environment.size.y),
+            },
+            environment_texture.inner().size(),
+        );
+
         let geometry = if geometry.validate() {
             geometry
         } else {
@@ -137,6 +168,7 @@ impl Renderer {
             &settings_uniform,
             &per_render_uniform,
             &camera_uniform,
+            &environment_texture,
             &materials_storage,
             &vertices_storage,
             &triangles_storage,
@@ -157,6 +189,7 @@ impl Renderer {
             settings_uniform,
             per_render_uniform,
             camera_uniform,
+            environment_texture,
             materials_storage,
             vertices_storage,
             triangles_storage,
@@ -334,6 +367,7 @@ impl Renderer {
                 &self.settings_uniform,
                 &self.per_render_uniform,
                 &self.camera_uniform,
+                &self.environment_texture,
                 &self.materials_storage,
                 &self.vertices_storage,
                 &self.triangles_storage,

@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use light_raytracer::{Camera, Geometry, Renderer, RendererSettings};
+use light_raytracer::{Camera, Environment, Geometry, Renderer, RendererSettings};
 use winit::{
     dpi::PhysicalSize,
     event::{DeviceEvent, Event, KeyEvent, WindowEvent},
@@ -68,7 +68,7 @@ impl App {
             glam::UVec2::new(window.inner_size().width, window.inner_size().height);
 
         let device = wgpu_context.device();
-        let _queue = wgpu_context.queue();
+        let queue = wgpu_context.queue();
         let format = wgpu_context.surface_config().format;
 
         let renderer_settings = RendererSettings::default();
@@ -84,15 +84,19 @@ impl App {
 
         let camera_controller = CameraController::new(4.0, 0.1);
 
-        let geometry = Geometry::load_from_gltf("assets/basic.gltf", "Scene").unwrap();
+        let environment = Environment::load("assets/rural_crossroads_1k.hdr").unwrap();
+
+        let geometry = Geometry::load("assets/basic.gltf", "Scene").unwrap();
 
         let renderer = Renderer::new(
             device,
+            queue,
             size,
             format,
             renderer_settings.clone(),
             camera.clone(),
-            geometry.clone(),
+            environment,
+            geometry,
         );
 
         let ui_layer = UiLayer::new(&window, device, format, 1);

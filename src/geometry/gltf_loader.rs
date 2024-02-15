@@ -4,7 +4,7 @@ use glam::Vec4Swizzles;
 
 use crate::geometry::{Geometry, Material, Triangle, Vertex};
 
-pub fn load_from_gltf(path: &str, name: &str) -> Result<Geometry, Box<dyn std::error::Error>> {
+pub fn load(path: &str, name: &str) -> Result<Geometry, Box<dyn std::error::Error>> {
     let (document, buffers, _) = gltf::import(path)?;
 
     if let Some(scene) = document

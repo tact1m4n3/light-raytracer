@@ -53,11 +53,8 @@ impl Default for Geometry {
 
 impl Geometry {
     #[cfg(feature = "gltf")]
-    pub fn load_from_gltf(
-        path: &str,
-        scene_name: &str,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        gltf_loader::load_from_gltf(path, scene_name)
+    pub fn load(path: &str, scene_name: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        gltf_loader::load(path, scene_name)
     }
 
     pub fn validate(&self) -> bool {

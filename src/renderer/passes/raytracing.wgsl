@@ -63,14 +63,18 @@ var<uniform> u_camera: Camera;
 
 @group(0)
 @binding(6)
-var<storage, read> b_materials: array<Material>;
+var t_environment: texture_2d<f32>;
 
 @group(0)
 @binding(7)
-var<storage, read> b_vertices: array<Vertex>;
+var<storage, read> b_materials: array<Material>;
 
 @group(0)
 @binding(8)
+var<storage, read> b_vertices: array<Vertex>;
+
+@group(0)
+@binding(9)
 var<storage, read> b_triangles: array<Triangle>;
 
 struct Ray {
@@ -114,7 +118,8 @@ fn per_pixel(coord: vec2<u32>) {
             ray.direction = normalize(rand_unit_sphere() + payload.normal);
         }
 
-        light += contribution * mix(vec3<f32>(0.1, 0.1, 0.3), vec3<f32>(1.0), furnace_test);
+        var environment_color = sample_environment(ray.direction);
+        light += contribution * mix(environment_color, vec3<f32>(1.0), furnace_test);
 
         acc_color += light;
     }
@@ -273,6 +278,29 @@ fn ray_triangle_intersection(ray: Ray, triangle_index: u32, t: ptr<function, f32
     *t = dot(p0p2, qvec) * inv_det;
 
     return true;
+}
+
+fn sample_texture(tex: texture_2d<f32>, uv: vec2<f32>) -> vec3<f32> {
+    let dimensions = textureDimensions(t_environment);
+    let coord = uv * vec2<f32>(dimensions);
+    let fxy = fract(coord);
+
+    let top_left = vec2<u32>(floor(coord));
+    let top_right = (top_left + vec2(0u, 1u)) % dimensions;
+    let bottom_left = (top_left + vec2(1u, 0u)) % dimensions;
+    let bottom_right = (top_left + vec2(1u, 1u)) % dimensions;
+
+    var color = textureLoad(tex, top_left, 0).xyz * (1.0 - fxy.x) * (1.0 - fxy.y);
+    color += textureLoad(tex, top_right, 0).xyz * (1.0 - fxy.x) * fxy.y;
+    color += textureLoad(tex, bottom_left, 0).xyz * fxy.x * (1.0 - fxy.y);
+    color += textureLoad(tex, bottom_right, 0).xyz * fxy.x * fxy.y;
+    return color;
+}
+
+fn sample_environment(dir: vec3<f32>) -> vec3<f32> {
+    let inv_atan = vec2(0.1591, 0.3183);
+    let uv = vec2(atan2(dir.z, dir.x), asin(-dir.y)) * inv_atan + 0.5;
+    return sample_texture(t_environment, uv);
 }
 
 fn aces_approx(x: vec3<f32>) -> vec3<f32> {
