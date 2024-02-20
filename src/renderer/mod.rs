@@ -87,7 +87,7 @@ impl Renderer {
                 samples_per_render: settings.samples_per_render,
                 max_ray_depth: settings.max_ray_depth,
                 furnace_test: settings.furnace_test.into(),
-                pad0: 0,
+                environment_brightness: settings.environment_brightness,
             }],
         );
 
@@ -109,7 +109,6 @@ impl Renderer {
         let environment = if environment.validate() {
             environment
         } else {
-            println!("invalid");
             Environment::default()
         };
 
@@ -298,7 +297,7 @@ impl Renderer {
                     samples_per_render: settings.samples_per_render,
                     max_ray_depth: settings.max_ray_depth,
                     furnace_test: settings.furnace_test.into(),
-                    pad0: 0,
+                    environment_brightness: settings.environment_brightness,
                 }],
             );
         }
@@ -415,6 +414,7 @@ pub struct RendererSettings {
     pub max_samples: u32,
     pub max_ray_depth: u32,
     pub furnace_test: bool,
+    pub environment_brightness: f32,
 }
 
 impl Default for RendererSettings {
@@ -424,13 +424,17 @@ impl Default for RendererSettings {
             max_samples: 1000,
             max_ray_depth: 10,
             furnace_test: false,
+            environment_brightness: 1.0,
         }
     }
 }
 
 impl RendererSettings {
     pub fn validate(&self) -> bool {
-        self.samples_per_render > 0 && self.max_ray_depth > 0 && self.max_samples > 0
+        self.samples_per_render > 0
+            && self.max_ray_depth > 0
+            && self.max_samples > 0
+            && self.environment_brightness > 0.0
     }
 }
 
@@ -449,7 +453,7 @@ pub struct SettingsUniform {
     samples_per_render: u32,
     max_ray_depth: u32,
     furnace_test: u32,
-    pad0: u32,
+    environment_brightness: f32,
 }
 
 #[repr(C)]

@@ -205,7 +205,7 @@ impl RaytracingPass {
     }
 
     pub fn dispatch(
-        &mut self,
+        &self,
         encoder: &mut wgpu::CommandEncoder,
         size: glam::UVec2,
         bind_group: &wgpu::BindGroup,
@@ -215,7 +215,7 @@ impl RaytracingPass {
             timestamp_writes: None,
         });
 
-        const WORKGROUP_SIZE: glam::UVec2 = glam::UVec2::new(16, 16);
+        const WORKGROUP_SIZE: glam::UVec2 = glam::uvec2(16, 16);
         let workgroups = utils::workgroups_2d(size, WORKGROUP_SIZE);
 
         cpass.set_pipeline(&self.pipeline);

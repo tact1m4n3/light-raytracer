@@ -39,7 +39,7 @@ impl Camera {
         glam::Mat4::look_at_rh(
             self.position,
             self.position + self.forward,
-            glam::Vec3::new(0.0, 1.0, 0.0),
+            glam::vec3(0.0, 1.0, 0.0),
         )
     }
 

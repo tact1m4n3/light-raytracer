@@ -14,13 +14,27 @@ impl Default for Environment {
 
 impl Environment {
     #[cfg(feature = "image")]
-    pub fn load(path: &str) -> Result<Self, image::ImageError> {
-        use image::EncodableLayout;
+    pub fn load(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        use image::codecs::hdr::HdrDecoder;
+        use std::{fs, io::Cursor};
 
-        let img = image::open(path)?;
-        let size = glam::uvec2(img.width(), img.height());
-        let data = img.into_rgba32f().as_bytes().to_owned();
-        Ok(Self { size, data })
+        let img_data = fs::read(path)?;
+
+        let hdr_decoder = HdrDecoder::new(Cursor::new(img_data))?;
+        let meta = hdr_decoder.metadata();
+        let mut pixels = vec![[0.0, 0.0, 0.0, 0.0]; meta.width as usize * meta.height as usize];
+        hdr_decoder.read_image_transform(
+            |pix| {
+                let rgb = pix.to_hdr();
+                [rgb.0[0], rgb.0[1], rgb.0[2], 1.0f32]
+            },
+            &mut pixels[..],
+        )?;
+
+        Ok(Self {
+            size: glam::uvec2(meta.width, meta.height),
+            data: bytemuck::cast_slice(&pixels).to_vec(),
+        })
     }
 
     pub fn validate(&self) -> bool {

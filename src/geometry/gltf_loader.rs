@@ -132,8 +132,8 @@ fn handle_node(
 
             for i in 0..positions.len() {
                 vertices.push(Vertex {
-                    position: transform_matrix.transform_point3(glam::Vec3::from(positions[i])),
-                    tex_coord: tex_coords[i].into(),
+                    position: transform_matrix.transform_point3(positions[i].into()),
+                    tex_coord: glam::Vec2::from_slice(tex_coords.get(i).unwrap_or(&[0.0, 0.0])),
                     normal: normals[i].into(),
                 });
             }

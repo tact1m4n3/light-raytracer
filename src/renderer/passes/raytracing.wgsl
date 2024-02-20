@@ -2,6 +2,7 @@ struct Settings {
     samples_per_render: u32,
     max_ray_depth: u32,
     furnace_test: u32,
+    environment_brightness: f32,
 }
 
 struct PerRender {
@@ -118,17 +119,16 @@ fn per_pixel(coord: vec2<u32>) {
             ray.direction = normalize(rand_unit_sphere() + payload.normal);
         }
 
-        var environment_color = sample_environment(ray.direction);
+        var environment_color = sample_environment(ray.direction) * u_settings.environment_brightness;
         light += contribution * mix(environment_color, vec3<f32>(1.0), furnace_test);
 
         acc_color += light;
     }
 
-    acc_color += textureLoad(t_acc_input, coord, 0).xyz;
+    acc_color += textureLoad(t_acc_input, coord, 0).rgb;
 
     var output_color = acc_color / f32(u_per_render.num_samples + u_settings.samples_per_render);
     output_color = aces_approx(output_color);
-    output_color = pow(output_color, vec3<f32>(1. / 2.2));
 
     textureStore(t_acc_output, coord, vec4<f32>(acc_color, 1.0));
     textureStore(t_output, coord, vec4<f32>(output_color, 1.0));
@@ -280,27 +280,26 @@ fn ray_triangle_intersection(ray: Ray, triangle_index: u32, t: ptr<function, f32
     return true;
 }
 
-fn sample_texture(tex: texture_2d<f32>, uv: vec2<f32>) -> vec3<f32> {
-    let dimensions = textureDimensions(t_environment);
-    let coord = uv * vec2<f32>(dimensions);
-    let fxy = fract(coord);
+fn sample_texture(tex: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
+    let size = textureDimensions(tex);
 
-    let top_left = vec2<u32>(floor(coord));
-    let top_right = (top_left + vec2(0u, 1u)) % dimensions;
-    let bottom_left = (top_left + vec2(1u, 0u)) % dimensions;
-    let bottom_right = (top_left + vec2(1u, 1u)) % dimensions;
+    let coord = clamp(uv, vec2(0.0), vec2(1.0)) * vec2<f32>(size);
 
-    var color = textureLoad(tex, top_left, 0).xyz * (1.0 - fxy.x) * (1.0 - fxy.y);
-    color += textureLoad(tex, top_right, 0).xyz * (1.0 - fxy.x) * fxy.y;
-    color += textureLoad(tex, bottom_left, 0).xyz * fxy.x * (1.0 - fxy.y);
-    color += textureLoad(tex, bottom_right, 0).xyz * fxy.x * fxy.y;
-    return color;
+    let pixel = vec2<u32>(floor(coord));
+    let frac = fract(coord);
+
+    let s0 = textureLoad(tex, (pixel + vec2(0u, 0u)) % size, 0);
+    let s1 = textureLoad(tex, (pixel + vec2(0u, 1u)) % size, 0);
+    let s2 = textureLoad(tex, (pixel + vec2(1u, 0u)) % size, 0);
+    let s3 = textureLoad(tex, (pixel + vec2(1u, 1u)) % size, 0);
+
+    return s0 * (1.0 - frac.x) * (1.0 - frac.y) + s1 * (1.0 - frac.x) * frac.y + s2 * frac.x * (1.0 - frac.y) + s3 * frac.x * frac.y;
 }
 
 fn sample_environment(dir: vec3<f32>) -> vec3<f32> {
     let inv_atan = vec2(0.1591, 0.3183);
     let uv = vec2(atan2(dir.z, dir.x), asin(-dir.y)) * inv_atan + 0.5;
-    return sample_texture(t_environment, uv);
+    return sample_texture(t_environment, uv).rgb;
 }
 
 fn aces_approx(x: vec3<f32>) -> vec3<f32> {

@@ -13,10 +13,10 @@ use crate::{camera_controller::CameraController, ui_layer::UiLayer, wgpu_context
 pub async fn run() {
     let event_loop = EventLoop::new().unwrap();
     let window = WindowBuilder::new()
-        .with_title("Light Preview")
+        .with_title("Live Renderer")
         .with_inner_size(PhysicalSize {
-            width: 1200,
-            height: 800,
+            width: 1800,
+            height: 1200,
         })
         .build(&event_loop)
         .unwrap();
@@ -57,15 +57,14 @@ struct App {
     renderer_settings: RendererSettings,
     renderer: Renderer,
     ui_layer: UiLayer,
-    last_render_time: u32,
+    frame_time: f32,
 }
 
 impl App {
     async fn new(window: Window) -> Self {
         let wgpu_context = WgpuContext::new(&window).await;
 
-        let size: glam::UVec2 =
-            glam::UVec2::new(window.inner_size().width, window.inner_size().height);
+        let size = glam::uvec2(window.inner_size().width, window.inner_size().height);
 
         let device = wgpu_context.device();
         let queue = wgpu_context.queue();
@@ -74,8 +73,8 @@ impl App {
         let renderer_settings = RendererSettings::default();
 
         let camera = Camera {
-            position: glam::Vec3::new(0.0, 0.0, 8.0),
-            forward: glam::Vec3::new(0.0, 0.0, -1.0),
+            position: glam::vec3(0.0, 0.0, 8.0),
+            forward: glam::vec3(0.0, 0.0, -1.0),
             aspect: size.x as f32 / size.y as f32,
             fovy: 45.0,
             znear: 0.1,
@@ -109,7 +108,7 @@ impl App {
             renderer_settings,
             renderer,
             ui_layer,
-            last_render_time: 0,
+            frame_time: 0.0,
         }
     }
 
@@ -134,7 +133,7 @@ impl App {
                 self.camera_controller.on_key_event(physical_key, state);
             }
             WindowEvent::Resized(new_size) => {
-                let new_size = glam::UVec2::new(new_size.width, new_size.height);
+                let new_size = glam::uvec2(new_size.width, new_size.height);
 
                 self.wgpu_context.resize(new_size);
                 self.renderer.resize(new_size);
@@ -155,6 +154,7 @@ impl App {
     }
 
     fn update(&mut self, dt: f32) {
+        self.frame_time = dt;
         if self
             .camera_controller
             .update(dt, &self.window, &mut self.camera)
@@ -189,7 +189,11 @@ impl App {
             |ctx| {
                 egui::Window::new("Main").title_bar(false).show(ctx, |ui| {
                     ui.heading("Statistics");
-                    ui.label(format!("Render Time: {} ms", self.last_render_time));
+                    ui.label(format!("Frame Time: {:.2} ms", self.frame_time));
+                    ui.label(format!(
+                        "Frames per Second: {}",
+                        (1.0 / self.frame_time) as u32
+                    ));
                     if ui.button("Reset").clicked() {
                         self.renderer.reset();
                     }
@@ -240,6 +244,19 @@ impl App {
                                 .changed();
                             ui.end_row();
 
+                            ui.label("Environment Brightness");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(
+                                        &mut self.renderer_settings.environment_brightness,
+                                    )
+                                    .speed(0.01)
+                                    .fixed_decimals(2)
+                                    .clamp_range(0.0..=10.0),
+                                )
+                                .changed();
+                            ui.end_row();
+
                             if changed {
                                 self.renderer
                                     .update_settings(self.renderer_settings.clone());
@@ -249,9 +266,7 @@ impl App {
             },
         );
 
-        let render_start = Instant::now();
         queue.submit(std::iter::once(encoder.finish()));
         frame.present();
-        self.last_render_time = (Instant::now() - render_start).as_millis() as u32;
     }
 }
