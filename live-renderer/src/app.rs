@@ -189,7 +189,7 @@ impl App {
             |ctx| {
                 egui::Window::new("Main").title_bar(false).show(ctx, |ui| {
                     ui.heading("Statistics");
-                    ui.label(format!("Frame Time: {:.2} ms", self.frame_time));
+                    ui.label(format!("Frame Time: {:.2} s", self.frame_time));
                     ui.label(format!(
                         "Frames per Second: {}",
                         (1.0 / self.frame_time) as u32
