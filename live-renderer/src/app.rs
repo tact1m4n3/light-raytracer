@@ -22,6 +22,8 @@ pub async fn run() {
         .unwrap();
     let mut app = App::new(window).await;
 
+    println!("Hello world");
+
     event_loop.set_control_flow(ControlFlow::Poll);
 
     let mut last_tick = Instant::now();

@@ -94,7 +94,7 @@ struct HitPayload {
 fn per_pixel(coord: vec2<u32>) {
     var furnace_test = f32(clamp(u_settings.furnace_test, 0u, 1u));
 
-    var acc_color: vec3<f32>;
+    var acc_color: vec3<f32> = vec3<f32>(0.0);
     for (var i = 0u; i < u_settings.samples_per_render; i++) {
         var ray: Ray;
         ray.origin = u_camera.position;
@@ -120,7 +120,7 @@ fn per_pixel(coord: vec2<u32>) {
         }
 
         var environment_color = sample_environment(ray.direction) * u_settings.environment_brightness;
-        light += contribution * mix(environment_color, vec3<f32>(1.0), furnace_test);
+        light += contribution * vec3<f32>(0.1, 0.2, 0.5); // * mix(environment_color, vec3<f32>(1.0), furnace_test);
 
         acc_color += light;
     }

@@ -14,7 +14,7 @@ impl Default for Environment {
 
 impl Environment {
     #[cfg(feature = "image")]
-    pub fn load(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load(path: &str) -> Result<Self, image::ImageError> {
         use image::codecs::hdr::HdrDecoder;
         use std::{fs, io::Cursor};
 
